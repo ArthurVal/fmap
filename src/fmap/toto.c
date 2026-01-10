@@ -1,1 +1,0 @@
-int toto(void) {}
