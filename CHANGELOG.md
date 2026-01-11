@@ -24,4 +24,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - WRITE into a file from STDIN;
 
 [unreleased]: https://github.com/ArthurVal/fmap/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/ArthurVal/fmap/releases/tag/v1.0.0
+[1.0.0]: https://github.com/ArthurVal/fmap/compare/v0.0.0...v1.0.0
