@@ -145,7 +145,7 @@ end:
   return ret;
 }
 
-static void PrintUsageTo(const char *name) {
+static void Usage(const char *name) {
   assert(name != NULL);
   fprintf(
       stderr,
@@ -246,7 +246,7 @@ static bool Args_FromArgv(int argc, char *argv[], struct Args *d_args) {
          ARG_END) {
     switch (arg_id) {
       case ARG_HELP:
-        PrintUsageTo(argv[0]);
+        Usage(argv[0]);
         return false;
 
       case ARG_VERSION:
