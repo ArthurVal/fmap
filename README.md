@@ -4,10 +4,6 @@ Utils tool to MAP (using Linux `mmap()`) the memory of a file and either:
 - Output its content to STDOUT;
 - Update its content from STDIN;
 
-## Usage
-
-TODO
-
 ## Build
 
 ### Dependencies
@@ -19,7 +15,6 @@ TODO
 | **libc**  | ?? (C 11)                  |
 | **linux** | ??                         |
 | **CMake** | ?? (tested on 3.12 -> TBD) |
-
 
 #### Runtime
 
