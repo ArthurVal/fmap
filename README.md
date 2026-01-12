@@ -4,6 +4,61 @@ Utils tool to MAP (using Linux `mmap()`) the memory of a file and either:
 - Output its content to STDOUT;
 - Update its content from STDIN;
 
+## Usage
+
+`fmap` only require a file name `FILE` (file must be 'mappable', i.e. doesn't
+work with FIFO) and will, by default, **ouput the file content through STDOUT**
+(**READING MODE**).
+
+```sh
+$ echo "Hello" > test.txt; fmap test.txt
+Hello
+$ echo "World" > test.txt; fmap test.txt
+World
+```
+
+You can specify a start `OFFSET` (`-o OFFSET`, in byte) and a size `SIZE` (`-s
+SIZE`, in byte) for the underlying memory span.
+
+```sh
+$ echo "Hello World" > test.txt; fmap test.txt -o 0x6 -s 2
+Wo
+```
+
+> [!IMPORTANT]
+> The ouput of `fmap` is **NOT** prepended by a NEWLINE if the mem span doesn't
+> end with one.
+
+If not specified or set to `-1`, the `SIZE` will match the file size.
+
+```sh
+$ echo "Hello World" > test.txt; fmap test.txt -o 0x6
+World
+```
+
+When any data is present on **STDIN**, `fmap` will **copy those data** into the
+memory span of the file (**WRITING MODE**).
+
+```sh
+$ echo "Hello World" > test.txt; cat test.txt
+Hello World
+$ echo -n "World" | fmap test.txt; cat test.txt
+World World
+$ echo -n "Hello" | fmap test.txt -o 0x6; cat test.txt
+World Hello
+```
+
+> [!IMPORTANT]
+> In **WRITING MODE**, the data written into the file is capped by `SIZE` (if
+> there are more data in STDIN, they will be **silently ignored**).
+
+```sh
+$ echo "Hello World" > test.txt; fmap test.txt
+Hello World
+$ echo -e "Hello\nThis is ignored ..." | fmap test.txt -o 0x6; cat test.txt
+Hello Hello
+```
+
 ## Build
 
 ### Dependencies
