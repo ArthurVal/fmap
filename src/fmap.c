@@ -151,7 +151,7 @@ static void Usage(const char *name) {
       stderr,
       "Usage: %s"
       "\n       FILE"
-      "\n       [-o OFFSET] [-s SIZE] [ACTION]"
+      "\n       [-o OFFSET] [-s SIZE]"
       "\n       [-h] [--version] [-v VERBOSE]"
       "\n"
       "\nMap FILE's memory (memory starting at OFFSET, of SIZE bytes) and"
@@ -222,23 +222,16 @@ static bool Args_FromArgv(int argc, char *argv[], struct Args *d_args) {
     /* Long options only */
     _ARG_LONG_OPT_BEGIN = (1 << 8),
     ARG_VERSION,
-    ARG_RD_RAW,
-    ARG_RD_HEX,
   } arg_id;
 
   struct option const my_options[] = {
       {"offset", required_argument, NULL, ARG_OFFSET},
       {"size", required_argument, NULL, ARG_SIZE},
-
       {"help", no_argument, NULL, ARG_HELP},
       {"version", no_argument, NULL, ARG_VERSION},
-
       {"verbose", required_argument, NULL, ARG_VERBOSE},
 
-      /* {"rd-raw", no_argument, NULL, ARG_RD_RAW}, */
-      /* {"rd-hex", no_argument, NULL, ARG_RD_HEX}, */
-      /* END */
-      {NULL, 0, NULL, 0},
+      {NULL, 0, NULL, 0}, /* END */
   };
 
   opterr = 0; /* Disable auto error logs from getopt */
