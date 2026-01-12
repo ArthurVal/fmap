@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0]
+
 ### Fixed
 
 - Bug that output an ERROR when `FILE` is not a REGULAR FILE (like `/dev/mem`)
@@ -43,7 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - READ a file to STDOUT;
   - WRITE into a file from STDIN;
 
-[unreleased]: https://github.com/ArthurVal/fmap/compare/v1.0.2...HEAD
+[unreleased]: https://github.com/ArthurVal/fmap/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/ArthurVal/fmap/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/ArthurVal/fmap/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/ArthurVal/fmap/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/ArthurVal/fmap/compare/v0.0.0...v1.0.0
