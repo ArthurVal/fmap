@@ -17,8 +17,8 @@ $ echo "World" > test.txt; fmap test.txt
 World
 ```
 
-You can specify a start `OFFSET` (`-o OFFSET`, in byte) and a size `SIZE` (`-s
-SIZE`, in byte) for the underlying memory span.
+You can specify a start `OFFSET` (in bytes, using `-o OFFSET`) and a size `SIZE`
+(in bytes, using `-s SIZE`) for the underlying memory span.
 
 ```sh
 $ echo "Hello World" > test.txt; fmap test.txt -o 0x6 -s 2
@@ -28,6 +28,9 @@ Wo
 > [!IMPORTANT]
 > The ouput of `fmap` is **NOT** prepended by a NEWLINE if the mem span doesn't
 > end with one.
+
+> [!TIP]
+> Use `--help` to get all the options available
 
 If not specified or set to `-1`, the `SIZE` will match the file size.
 
@@ -49,8 +52,8 @@ World Hello
 ```
 
 > [!IMPORTANT]
-> In **WRITING MODE**, the data written into the file is capped by `SIZE` (if
-> there are more data in STDIN, they will be **silently ignored**).
+> In **WRITING MODE**, the data written into the file are capped by `SIZE` bytes
+> (if there are more data in STDIN, they will be **silently ignored**).
 
 ```sh
 $ echo "Hello World" > test.txt; fmap test.txt
