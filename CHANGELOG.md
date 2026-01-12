@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LICENSE (GPL3)
 - CHANGELOG
 
+### Remove
+
+- Old `RD_RAW`/`RD_HEX` args mentions in Usage / ARG_TYPE enum
+
 ## [1.0.0] - 2026-01-11
 
 ### Added
