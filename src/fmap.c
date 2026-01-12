@@ -325,6 +325,27 @@ static bool Args_FromArgv(int argc, char *argv[], struct Args *d_args) {
   return true;
 }
 
+static const char *stat_mode_ToString(__mode_t mode) {
+  switch (mode & S_IFMT) {
+    case S_IFBLK:
+      return "BLK DEV";
+    case S_IFCHR:
+      return "CHR DEV";
+    case S_IFDIR:
+      return "DIR";
+    case S_IFIFO:
+      return "PIPE";
+    case S_IFLNK:
+      return "LNK";
+    case S_IFREG:
+      return "FILE";
+    case S_IFSOCK:
+      return "SOCK";
+  }
+
+  return "UNKNOWN";
+}
+
 static bool Args_UpdateFromFd(struct Args *args, int fd) {
   assert(args != NULL);
 
@@ -334,24 +355,38 @@ static bool Args_UpdateFromFd(struct Args *args, int fd) {
   if (fstat(fd, &stats) == -1) {
     ERROR("fstat: %s", strerror(errno));
     success = false;
-  } else if (!S_ISREG(stats.st_mode)) {
-    ERROR("Not a regular file (doesn't have a size)");
-    success = false;
   } else {
-    DEBUG("File: %li bytes", stats.st_size);
-    if (args->offset > stats.st_size) {
-      ERROR("Offset (0x%zX) is too big (file is 0x%zX bytes)", args->offset,
-            stats.st_size);
+    DEBUG(
+        "File:"
+        "\n- Type: '%s'"
+        "\n- Size: %li bytes",
+        stat_mode_ToString(stats.st_mode), stats.st_size);
+
+    if (stats.st_size > 0) {
+      if (args->offset > stats.st_size) {
+        ERROR("Offset (0x%zX) is too big (file is 0x%zX bytes)", args->offset,
+              stats.st_size);
+        success = false;
+      } else {
+        if (args->size < 0) {
+          args->size = stats.st_size;
+        }
+
+        if ((stats.st_size - args->offset) < args->size) {
+          args->size = (stats.st_size - args->offset);
+          INFO("Set size to %zu bytes (match the file size)", args->size);
+        }
+      }
+    } else if (args->size < 0) {
+      ERROR(
+          "Unable to get the file size. Either the file type is wrong OR "
+          "you must specify a SIZE by hand.");
       success = false;
     } else {
-      if (args->size < 0) {
-        args->size = stats.st_size;
-      }
-
-      if ((stats.st_size - args->offset) < args->size) {
-        args->size = (stats.st_size - args->offset);
-        INFO("Set size to %zu bytes (match the file size)", args->size);
-      }
+      WARN(
+          "Unable to check that the required OFFSET/SIZE matches the file "
+          "size (File type: %s).",
+          stat_mode_ToString(stats.st_mode));
     }
   }
 

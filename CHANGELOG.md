@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Bug that output an ERROR when `FILE` is not a REGULAR FILE (like `/dev/mem`)
 - `README.md`: Typos + Phrases
 
 ## [1.0.2] - 2026-01-12
