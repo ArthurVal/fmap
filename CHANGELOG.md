@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Issue when compiling on MacOS (`__mode_t`)
+- STDIN detection (use `isatty()`)
 
 ## [1.1.0]
 

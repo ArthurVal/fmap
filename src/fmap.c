@@ -13,7 +13,6 @@
 #include <unistd.h> /* close */
 
 /* Linux */
-#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
@@ -32,8 +31,6 @@ static bool Args_UpdateFromFd(struct Args *args, int fd);
 
 static bool FD_Read(int fd, uint8_t *buffer, size_t size, size_t *d_written);
 static bool FD_Write(int fd, uint8_t const *buffer, size_t size);
-
-static int STDIN_BytesAvailables(void);
 
 int main(int argc, char *argv[]) {
   int ret = EXIT_SUCCESS;
@@ -55,16 +52,6 @@ int main(int argc, char *argv[]) {
       "\n - -o  : 0x%zX"
       "\n - -s  : %li",
       args.file, args.offset, args.size);
-
-  int stdin_bytes_count = STDIN_BytesAvailables();
-  if (stdin_bytes_count < 0) {
-    WARN("Couldn't retreived the STDIN byte count: %s", strerror(errno));
-    WARN("-> Default to READING");
-    stdin_bytes_count = 0;
-  } else {
-    DEBUG("STDIN: %d bytes", stdin_bytes_count);
-    INFO("MODE: %c", stdin_bytes_count > 0 ? 'W' : 'R');
-  }
 
   DEBUG("Opening '%s': ...", args.file);
   int fd = open(args.file, O_RDWR | O_SYNC);
@@ -102,18 +89,8 @@ int main(int argc, char *argv[]) {
     mem += alignment; /* mem needs to be 'un-aligned' */
   }
 
-  if (stdin_bytes_count > 0) {
-    size_t written = 0;
-    DEBUG("Writing: ...");
-    if (!FD_Read(fileno(stdin), mem, (size_t)args.size, &written)) {
-      ERROR("Writing: FAILED: %s", strerror(errno));
-      ret = EXIT_FAILURE;
-      goto end_after_mmap;
-    } else {
-      INFO("Writing: DONE");
-      DEBUG("Wrote: %zu bytes", written);
-    }
-  } else {
+  if (isatty(fileno(stdin))) {
+    INFO("MODE: READ");
     DEBUG("Reading: ...");
     if (!FD_Write(fileno(stdout), mem, (size_t)args.size)) {
       ERROR("Reading: FAILED: %s", strerror(errno));
@@ -121,6 +98,17 @@ int main(int argc, char *argv[]) {
       goto end_after_mmap;
     } else {
       INFO("Reading: DONE");
+    }
+  } else {
+    INFO("MODE: WRITE");
+    size_t written = 0;
+    if (!FD_Read(fileno(stdin), mem, (size_t)args.size, &written)) {
+      ERROR("Writing: FAILED: %s", strerror(errno));
+      ret = EXIT_FAILURE;
+      goto end_after_mmap;
+    } else {
+      INFO("Writing: DONE");
+      DEBUG("Wrote: %zu bytes", written);
     }
   }
 
@@ -427,14 +415,4 @@ static bool FD_Write(int fd, uint8_t const *buffer, size_t size) {
   }
 
   return (written != -1);
-}
-
-static int STDIN_BytesAvailables(void) {
-  int bytes = 0;
-
-  if (ioctl(fileno(stdin), FIONREAD, &bytes) == -1) {
-    return -1;
-  }
-
-  return bytes;
 }
