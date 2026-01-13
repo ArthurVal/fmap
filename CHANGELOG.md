@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Issue when compiling on MacOS (`__mode_t`)
+
 ## [1.1.0]
 
 ### Fixed

@@ -325,8 +325,10 @@ static bool Args_FromArgv(int argc, char *argv[], struct Args *d_args) {
   return true;
 }
 
-static const char *stat_mode_ToString(__mode_t mode) {
-  switch (mode & S_IFMT) {
+static const char *stat_ModeToString(struct stat const *stat) {
+  assert(stat != NULL);
+
+  switch (stat->st_mode & S_IFMT) {
     case S_IFBLK:
       return "BLK DEV";
     case S_IFCHR:
@@ -360,7 +362,7 @@ static bool Args_UpdateFromFd(struct Args *args, int fd) {
         "File:"
         "\n- Type: '%s'"
         "\n- Size: %li bytes",
-        stat_mode_ToString(stats.st_mode), stats.st_size);
+        stat_ModeToString(&stats), stats.st_size);
 
     if (stats.st_size > 0) {
       if (args->offset > stats.st_size) {
@@ -386,7 +388,7 @@ static bool Args_UpdateFromFd(struct Args *args, int fd) {
       WARN(
           "Unable to check that the required OFFSET/SIZE matches the file "
           "size (File type: %s).",
-          stat_mode_ToString(stats.st_mode));
+          stat_ModeToString(&stats));
     }
   }
 
