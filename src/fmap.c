@@ -231,7 +231,7 @@ static bool Args_FromArgv(int argc, char *argv[], struct Args *d_args) {
         return false;
 
       case ARG_VERSION:
-        fputs(FMAP_VERSION_STR, stderr);
+        fputs(FMAP_VERSION_STR "\n", stderr);
         return false;
 
       case ARG_VERBOSE: {
