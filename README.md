@@ -103,15 +103,15 @@ Hello Hello
 ```
 
 > [!IMPORTANT]
-> Data written into the file are capped by `SIZE` bytes
-> (if there are more data in STDIN, they will be **silently ignored**).
-
-```bash
-$ echo "Hello World" > test.txt; fmap test.txt
-Hello World
-$ echo -e "Hello\nThis is ignored ..." | fmap test.txt -o 0x6; cat test.txt
-Hello Hello
-```
+> Data written into the file are capped by `SIZE` bytes.<br>
+> If there are more data in STDIN, they will be **silently ignored**.
+> 
+> ```bash
+> $ echo "Hello World" > test.txt; fmap test.txt
+> Hello World
+> $ echo -e "Hello\nThis is ignored ..." | fmap test.txt -o 0x6; cat test.txt
+> Hello Hello
+> ```
 
 ## 📝 License
 
