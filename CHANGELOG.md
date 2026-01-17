@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Improved `README.md` 
+
 ### Fixed
 
 - `--version` missing trailing NEWLINE
+- Missing `static inline` ([0eec733](https://github.com/ArthurVal/fmap/commit/0eec733a7367024f9be1ff63b66162228ad40d9a))
 
 ## [1.1.1]
 
