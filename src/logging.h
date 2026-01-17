@@ -45,7 +45,7 @@ static inline const char *LogLevel_ToString(LogLevel lvl) {
 
 #undef _RETURN_STRING_LVL
 
-bool LogLevel_IsValid(LogLevel lvl) { return LogLevel_ToString(lvl) != NULL; }
+static inline bool LogLevel_IsValid(LogLevel lvl) { return LogLevel_ToString(lvl) != NULL; }
 
 static inline void Log(LogLevel lvl, const char *fmt, ...) {
   va_list args;
