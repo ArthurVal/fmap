@@ -15,12 +15,11 @@ This project use [CMake](https://cmake.org/cmake/help/latest/) as build system.
 
 #### Dependencies
 
-Build
+Build:
+- [CMake](https://cmake.org/cmake/help/latest/) >= 3.12;
 
-| **NAME**  | **VERSION** | **DEPENDENCY** |
-|-----------|-------------|----------------|
-| **libc**  | ??          | BUILD/RUNTIME  |
-| **CMake** | ??          | BUILD          |
+Runtime:
+- N/A
 
 #### Compile
 
