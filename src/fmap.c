@@ -53,7 +53,7 @@ static void Usage(FILE *restrict f, const char *restrict name) {
       "\n            (default: 0)"
       "\n -s/--size N"
       "\n            SIZE of the mapping (in BYTES)"
-      "\n            < 0: Match the FILE sizes (REG FILE only)"
+      "\n            < 0: Match the FILE size (REG FILE only)"
       "\n            (default: -1)"
       "\n -v/--verbose [DEBUG, INFO, WARN, ERROR]"
       "\n            Log level"
@@ -267,7 +267,7 @@ static bool File_UpdateRange(int fd, ssize_t offset, ssize_t size,
         "(PIPE/...)");
     success = false;
   } else if ((offset > f_size) || (offset < -f_size)) {
-    ERROR("Wrong OFFSET (%li) w.r.t. the FILE'sizes (%li)", offset, f_size);
+    ERROR("Wrong OFFSET (%li) w.r.t. the FILE'size (%li)", offset, f_size);
     success = false;
   } else {
     if (offset < 0) {
@@ -280,7 +280,7 @@ static bool File_UpdateRange(int fd, ssize_t offset, ssize_t size,
 
     if ((f_size - offset) < size) {
       ERROR(
-          "Wrong SIZE (%li) w.r.t the OFFSET (%li) and the FILE'sizes (%li) "
+          "Wrong SIZE (%li) w.r.t the OFFSET (%li) and the FILE'size (%li) "
           "(Size remaining: %li)",
           size, offset, f_size, (f_size - offset));
       success = false;
