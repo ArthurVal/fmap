@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 project(fmap
-  VERSION 1.1.1
+  VERSION 1.2.0
   DESCRIPTION "Provide fmap utils tools to read/write to file using mmap"
   LANGUAGES C
 )
