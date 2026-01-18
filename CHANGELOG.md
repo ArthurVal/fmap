@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Improved `README.md` 
+- Improved `README.md`
+- Refactoring:
+  - No more forward declaration of static functions in `fmap.c`
+  - `OFFSET`: Can now be NEGATIVE
+  - Logs updated
 
 ### Fixed
 

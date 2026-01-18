@@ -1,6 +1,7 @@
 /* libc  */
 #include <assert.h>
-#include <errno.h> /* errno */
+#include <errno.h>  /* errno */
+#include <stdarg.h> /* va_list */
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,193 +9,98 @@
 #include <string.h> /* strerror */
 
 /* POSIX */
-#include <fcntl.h>  /* open */
-#include <getopt.h> /* getopt_long */
-#include <unistd.h> /* close */
-
-/* Linux */
-#include <sys/mman.h>
-#include <sys/stat.h>
+#include <fcntl.h>    /* open */
+#include <getopt.h>   /* getopt_long */
+#include <sys/mman.h> /* mmap */
+#include <sys/stat.h> /* stat */
+#include <unistd.h>   /* close */
 
 /* internal */
 #include "config.h"
 #include "logging.h"
 
-struct Args {
-  const char *file;
-  off_t offset;
-  ssize_t size;
-};
-
-static bool Args_FromArgv(int argc, char *argv[], struct Args *d_args);
-static bool Args_UpdateFromFd(struct Args *args, int fd);
-
-static bool FD_Read(int fd, uint8_t *buffer, size_t size, size_t *d_written);
-static bool FD_Write(int fd, uint8_t const *buffer, size_t size);
-
-int main(int argc, char *argv[]) {
-  int ret = EXIT_SUCCESS;
-
-  struct Args args = {
-      .file = NULL,
-      .offset = 0x0,
-      .size = -1,
-  };
-
-  if (!Args_FromArgv(argc, argv, &args)) {
-    ret = EXIT_FAILURE;
-    goto end;
-  }
-
-  DEBUG(
-      "Args:"
-      "\n - FILE: %s"
-      "\n - -o  : 0x%zX"
-      "\n - -s  : %li",
-      args.file, args.offset, args.size);
-
-  DEBUG("Opening '%s': ...", args.file);
-  int fd = open(args.file, O_RDWR | O_SYNC);
-  if (fd == -1) {
-    ERROR("Opening '%s': FAILED: %s", args.file, strerror(errno));
-    ret = EXIT_FAILURE;
-    goto end;
-  } else {
-    INFO("Opening '%s': DONE", args.file);
-  }
-
-  if (!Args_UpdateFromFd(&args, fd)) {
-    ret = EXIT_FAILURE;
-    goto end_after_open;
-  }
-
-  DEBUG("Mapping %zu bytes @ 0x%zX: ...", args.size, args.offset);
-
-  /* The offset MUST BE aligned to a PAGESIZE (required by mmap) */
-  off_t alignment = args.offset - (args.offset & ~(sysconf(_SC_PAGE_SIZE) - 1));
-  DEBUG("Align by %li bytes (PAGE: %li)", alignment, sysconf(_SC_PAGE_SIZE));
-
-  uint8_t *mem =
-      mmap(NULL, (size_t)(args.size + alignment), PROT_READ | PROT_WRITE,
-           MAP_SHARED, fd, (args.offset - alignment));
-
-  if (mem == MAP_FAILED) {
-    ERROR("Mapping %li bytes @ 0x%zX: FAILED: %s", args.size, args.offset,
-          strerror(errno));
-
-    ret = EXIT_FAILURE;
-    goto end_after_open;
-  } else {
-    INFO("Mapping %li bytes @ 0x%zX: DONE", args.size, args.offset);
-    mem += alignment; /* mem needs to be 'un-aligned' */
-  }
-
-  if (isatty(fileno(stdin))) {
-    INFO("MODE: READ");
-    DEBUG("Reading: ...");
-    if (!FD_Write(fileno(stdout), mem, (size_t)args.size)) {
-      ERROR("Reading: FAILED: %s", strerror(errno));
-      ret = EXIT_FAILURE;
-      goto end_after_mmap;
-    } else {
-      INFO("Reading: DONE");
-    }
-  } else {
-    INFO("MODE: WRITE");
-    size_t written = 0;
-    if (!FD_Read(fileno(stdin), mem, (size_t)args.size, &written)) {
-      ERROR("Writing: FAILED: %s", strerror(errno));
-      ret = EXIT_FAILURE;
-      goto end_after_mmap;
-    } else {
-      INFO("Writing: DONE");
-      DEBUG("Wrote: %zu bytes", written);
-    }
-  }
-
-end_after_mmap:
-  DEBUG("Unmapping of memory: ...");
-  mem -= alignment; /* Re-aligned the mem to mmap */
-  if (munmap(mem, (size_t)(args.size + alignment)) == -1) {
-    WARN("Unmapping of memory: FAILED: %s", strerror(errno));
-  } else {
-    INFO("Unmapping of memory: DONE");
-  }
-
-end_after_open:
-  DEBUG("Closing file: ...");
-  if (close(fd) == -1) {
-    WARN("Closing file: FAILED: %s", strerror(errno));
-  } else {
-    INFO("Closing file: DONE");
-  }
-
-end:
-  return ret;
-}
-
-static void Usage(const char *name) {
+static void Usage(FILE *restrict f, const char *restrict name) {
   assert(name != NULL);
+
   fprintf(
-      stderr,
-      "Usage: %s"
+      f,
+      "fmap v" FMAP_VERSION_STR
+      "\nUsage: %s"
       "\n       FILE"
       "\n       [-o OFFSET] [-s SIZE]"
       "\n       [-h] [--version] [-v VERBOSE]"
       "\n"
-      "\nMap FILE's memory (memory starting at OFFSET, of SIZE bytes) and"
-      "\nOUTPUT its content to STDOUT."
-      "\nIf STDIN got ANY data in it, copy STDIN into the mapped memory."
+      "\nMap FILE's memory and OUTPUT its content to STDOUT."
+      "\nIf STDIN got ANY data, copy STDIN into the mapped memory instead."
+      "\n"
+      "\nThe mapped region can be customized using OFFSET and SIZE"
+      "\nin order to map a file using [OFFSET; OFFSET+SIZE) memory range."
       "\n"
       "\nEffectively does the same as 'cat' but use 'mmap' instead, which can"
-      "\nbe used to interact with specific devices (like /dev/mem for example)."
+      "\nbe used to interact with specific devices (like /dev/mem for "
+      "example)."
       "\n"
       "\nPositional arguments (mandatory):"
       "\n FILE       Name of the file we wish to map"
       "\n"
       "\nOptions:"
-      "\n -h, --help"
+      "\n -h/--help"
       "\n            Show this help message and exit"
-      "\n --version"
-      "\n            Print the current script version"
-      "\n -o OFFSET, --offset OFFSET"
-      "\n            Begin of the address range within the file"
-      "\n            Must be >= 0"
-      "\n            (default: 0x0 -> Begin of the file)"
-      "\n -s SIZE, --size SIZE"
-      "\n            Size of the mapping in BYTES"
-      "\n            Clamped to the file size"
-      "\n            (default: -1 -> Whole file)"
-      "\n"
-      "\nLogging:"
-      "\n All logs go through STDERR."
-      "\n"
-      "\n -v [DEBUG, INFO, WARN, ERROR], --verbose [DEBUG, INFO, WARN, ERROR]"
-      "\n            Verbose log level"
+      "\n -o/--offset N"
+      "\n            OFFSET of the mapping (in BYTES)"
+      "\n            > 0: Relative to the begin of the FILE"
+      "\n            < 0: Relative to the end of the FILE (REG FILE only)"
+      "\n            (default: 0)"
+      "\n -s/--size N"
+      "\n            SIZE of the mapping (in BYTES)"
+      "\n            < 0: Match the FILE sizes (REG FILE only)"
+      "\n            (default: -1)"
+      "\n -v/--verbose [DEBUG, INFO, WARN, ERROR]"
+      "\n            Log level"
       "\n            (default: WARN)"
+      "\n --version"
+      "\n            Print the current script version and exit"
       "\n",
       name);
 }
 
-static bool StrToInt_i64(const char *restrict str, int base, int64_t *d_int,
-                         char **restrict d_remaining) {
-  assert(d_int != NULL);
-  errno = 0;
+static bool Parse_i64(const char *restrict str, int64_t *d_value,
+                      char **restrict d_remaining) {
+  assert(str != NULL);
+  assert(d_value != NULL);
 
+  errno = 0;
   bool success = true;
-  int64_t value = strtol(str, d_remaining, base);
+  int64_t value = strtol(str, d_remaining, 0);
   if (errno == ERANGE) {
     success = false;
   } else {
-    *d_int = value;
+    *d_value = value;
   }
 
   return success;
 }
 
-static bool Args_FromArgv(int argc, char *argv[], struct Args *d_args) {
+struct Args {
+  const char *file;
+
+  ssize_t offset;
+  ssize_t size;
+
+  union {
+    uint32_t all;
+    struct {
+      uint32_t help : 1;
+      uint32_t version : 1;
+    };
+  } flags;
+};
+
+static bool Args_FromArgv(struct Args *restrict args, int argc, char *argv[]) {
+  assert(args != NULL);
   assert(argv != NULL);
-  assert(d_args != NULL);
+
+  bool success = true;
 
   enum {
     ARG_END = -1,
@@ -215,61 +121,45 @@ static bool Args_FromArgv(int argc, char *argv[], struct Args *d_args) {
   struct option const my_options[] = {
       {"offset", required_argument, NULL, ARG_OFFSET},
       {"size", required_argument, NULL, ARG_SIZE},
+      {"verbose", required_argument, NULL, ARG_VERBOSE},
       {"help", no_argument, NULL, ARG_HELP},
       {"version", no_argument, NULL, ARG_VERSION},
-      {"verbose", required_argument, NULL, ARG_VERBOSE},
 
       {NULL, 0, NULL, 0}, /* END */
   };
 
   opterr = 0; /* Disable auto error logs from getopt */
-  while ((arg_id = getopt_long(argc, argv, "ho:s:v:", my_options, NULL)) !=
+  while ((arg_id = getopt_long(argc, argv, "o:s:v:h", my_options, NULL)) !=
          ARG_END) {
     switch (arg_id) {
       case ARG_HELP:
-        Usage(argv[0]);
-        return false;
+        args->flags.help = true;
+        break;
 
       case ARG_VERSION:
-        fputs(FMAP_VERSION_STR "\n", stderr);
-        return false;
+        args->flags.version = true;
+        break;
 
       case ARG_VERBOSE: {
         LogLevel lvl;
         if (!LogLevel_FromString(optarg, &(lvl))) {
-          ERROR("'-%c %s': Unknown log level '%s'", arg_id, optarg, optarg);
-          return false;
+          ERROR("Unknown log level '%s'", optarg);
+          success = false;
         } else {
           Logging_Level(&lvl);
         }
       } break;
 
+      case ARG_SIZE:
       case ARG_OFFSET: {
+        int64_t *val = arg_id == ARG_SIZE ? &(args->size) : &(args->offset);
         char *suffix;
-        if (!StrToInt_i64(optarg, 0, &(d_args->offset), &suffix)) {
+        if (!Parse_i64(optarg, val, &suffix)) {
           ERROR("'-%c %s': %s", arg_id, optarg, strerror(errno));
-          return false;
+          success = false;
         } else if (*suffix != '\0') {
           ERROR("'-%c %s': Unknown int suffix '%s'", arg_id, optarg, suffix);
-          return false;
-        } else if (d_args->offset < 0) {
-          ERROR("'-%c %s': Must be POSITIVE INTEGER", arg_id, optarg);
-          return false;
-        }
-
-      } break;
-
-      case ARG_SIZE: {
-        char *suffix;
-        if (!StrToInt_i64(optarg, 0, &(d_args->size), &suffix)) {
-          ERROR("'-%c %s': %s", arg_id, optarg, strerror(errno));
-          return false;
-        } else if (*suffix != '\0') {
-          ERROR("'-%c %s': Unknown int suffix '%s'", arg_id, optarg, suffix);
-          return false;
-        } else if (!((d_args->size == -1) || (d_args->size >= 0))) {
-          ERROR("'-%c %s': Must be '-1' OR POSITIVE INTEGER", arg_id, optarg);
-          return false;
+          success = false;
         }
       } break;
 
@@ -287,30 +177,30 @@ static bool Args_FromArgv(int argc, char *argv[], struct Args *d_args) {
             ERROR("'-%c': Unknown option", optopt);
             break;
         }
-        return false;
+        success = false;
+        break;
 
       default:
         ERROR("'-%c': Not implemented", arg_id);
+        success = false;
         break;
     }
   }
 
-  if ((d_args->file = argv[optind++]) == NULL) {
+  if ((args->file = argv[optind++]) == NULL) {
     ERROR("Missing mandatory FILE argument");
-    return false;
-  }
-
-  if (optind != argc) {
+    success = false;
+  } else if (optind != argc) {
     ERROR("Unknown positional arguments:");
 
     for (int i = optind; i < argc; ++i) {
       ERROR("- %s", argv[i]);
     }
 
-    return false;
+    success = false;
   }
 
-  return true;
+  return success;
 }
 
 static const char *stat_ModeToString(struct stat const *stat) {
@@ -336,8 +226,9 @@ static const char *stat_ModeToString(struct stat const *stat) {
   return "UNKNOWN";
 }
 
-static bool Args_UpdateFromFd(struct Args *args, int fd) {
-  assert(args != NULL);
+static bool File_GetSize(int fd, long *d_size) {
+  assert(fd > 0);
+  assert(d_size != NULL);
 
   struct stat stats;
   bool success = true;
@@ -346,44 +237,64 @@ static bool Args_UpdateFromFd(struct Args *args, int fd) {
     ERROR("fstat: %s", strerror(errno));
     success = false;
   } else {
-    DEBUG(
-        "File:"
-        "\n- Type: '%s'"
-        "\n- Size: %li bytes",
-        stat_ModeToString(&stats), stats.st_size);
+    DEBUG("File size (type: %s): %li bytes", stat_ModeToString(&stats),
+          stats.st_size);
 
-    if (stats.st_size > 0) {
-      if (args->offset > stats.st_size) {
-        ERROR("Offset (0x%zX) is too big (file is 0x%zX bytes)", args->offset,
-              stats.st_size);
-        success = false;
-      } else {
-        if (args->size < 0) {
-          args->size = stats.st_size;
-        }
+    *d_size = stats.st_size;
+  }
 
-        if ((stats.st_size - args->offset) < args->size) {
-          args->size = (stats.st_size - args->offset);
-          INFO("Set size to %zu bytes (match the file size)", args->size);
-        }
-      }
-    } else if (args->size < 0) {
+  return success;
+}
+
+static bool File_UpdateRange(int fd, ssize_t offset, ssize_t size,
+                             ssize_t *restrict d_offset,
+                             ssize_t *restrict d_size) {
+  assert(fd > 0);
+
+  assert(d_size != NULL);
+  assert(d_offset != NULL);
+
+  bool success = true;
+  long f_size;
+
+  if (!File_GetSize(fd, &f_size)) {
+    ERROR("Couldn't retreive FILE size");
+    success = false;
+  } else if (f_size <= 0) {
+    ERROR("Wrong FILE size (%li)", f_size);
+    ERROR(
+        "HINT: FILE may not be a REGULAR FILE and doesn't have a size "
+        "(PIPE/...)");
+    success = false;
+  } else if ((offset > f_size) || (offset < -f_size)) {
+    ERROR("Wrong OFFSET (%li) w.r.t. the FILE'sizes (%li)", offset, f_size);
+    success = false;
+  } else {
+    if (offset < 0) {
+      offset = f_size + offset;
+    }
+
+    if (size < 0) {
+      size = f_size - offset;
+    }
+
+    if ((f_size - offset) < size) {
       ERROR(
-          "Unable to get the file size. Either the file type is wrong OR "
-          "you must specify a SIZE by hand.");
+          "Wrong SIZE (%li) w.r.t the OFFSET (%li) and the FILE'sizes (%li) "
+          "(Size remaining: %li)",
+          size, offset, f_size, (f_size - offset));
       success = false;
     } else {
-      WARN(
-          "Unable to check that the required OFFSET/SIZE matches the file "
-          "size (File type: %s).",
-          stat_ModeToString(&stats));
+      *d_offset = offset;
+      *d_size = size;
     }
   }
 
   return success;
 }
 
-static bool FD_Read(int fd, uint8_t *buffer, size_t size, size_t *d_read) {
+static bool File_ReadInto(int fd, uint8_t *restrict buffer, size_t size,
+                          size_t *restrict d_read) {
   assert(buffer != NULL);
 
   size_t total = 0;
@@ -404,7 +315,7 @@ static bool FD_Read(int fd, uint8_t *buffer, size_t size, size_t *d_read) {
   return success;
 }
 
-static bool FD_Write(int fd, uint8_t const *buffer, size_t size) {
+static bool File_Write(int fd, uint8_t const *buffer, size_t size) {
   assert(buffer != NULL);
 
   ssize_t written = 0;
@@ -415,4 +326,165 @@ static bool FD_Write(int fd, uint8_t const *buffer, size_t size) {
   }
 
   return (written != -1);
+}
+
+struct Mapping {
+  uint8_t *data;
+  size_t size;
+  size_t alignment;
+};
+
+static bool Mapping_FromFile(struct Mapping *mapping, int fd, size_t offset,
+                             size_t size) {
+  assert(mapping != NULL);
+  assert(fd > 0);
+
+  bool success = true;
+
+  size_t alignment =
+      offset - (offset & ((size_t) ~(sysconf(_SC_PAGE_SIZE) - 1)));
+
+  DEBUG(
+      "Mapping:"
+      "\n- OFFSET: %zu (Aligned to %li - PAGE: %li)"
+      "\n- SIZE  : %zu",
+      offset, (offset - alignment), sysconf(_SC_PAGE_SIZE), size);
+
+  uint8_t *mem = mmap(NULL, (size + alignment), PROT_READ | PROT_WRITE,
+                      MAP_SHARED, fd, (off_t)(offset - alignment));
+
+  if (mem == MAP_FAILED) {
+    ERROR("mmap: %s", strerror(errno));
+    success = false;
+  } else {
+    mapping->data = mem + alignment;
+    mapping->size = (size_t)size;
+    mapping->alignment = (size_t)alignment;
+  }
+
+  return success;
+}
+
+static bool Mapping_Unmap(struct Mapping *mapping) {
+  assert(mapping != NULL);
+  assert(mapping->data != NULL);
+
+  bool success = true;
+  void *mem = mapping->data - mapping->alignment;
+  if (munmap(mem, (mapping->size + mapping->alignment)) != 0) {
+    ERROR("munmap: %s", strerror(errno));
+    success = false;
+  } else {
+    mapping->data = NULL;
+    mapping->size = 0;
+    mapping->alignment = 0;
+  }
+
+  return success;
+}
+
+int main(int argc, char *argv[]) {
+  int ret = EXIT_SUCCESS;
+  int fd = -1;
+  struct Args args = {
+      .file = NULL,
+      .offset = 0,
+      .size = -1,
+
+      .flags.all = 0x0,
+  };
+
+  struct Mapping mapping = {
+      .data = NULL,
+      .size = 0,
+      .alignment = 0,
+  };
+
+  if (!Args_FromArgv(&args, argc, argv)) {
+    fputc('\n', stderr);
+    Usage(stderr, argv[0]);
+    ret = EXIT_FAILURE;
+    goto end;
+  }
+
+  if (args.flags.help) {
+    Usage(stdout, argv[0]);
+    goto end;
+  }
+
+  if (args.flags.version) {
+    puts(FMAP_VERSION_STR);
+    goto end;
+  }
+
+  DEBUG(
+      "Args:"
+      "\n - FILE  : %s"
+      "\n - OFFSET: %li bytes"
+      "\n - SIZE  : %li bytes",
+      args.file, args.offset, args.size);
+
+  INFO("Opening '%s': ...", args.file);
+  if ((fd = open(args.file, O_RDWR | O_SYNC)) == -1) {
+    ERROR("open(): %s", strerror(errno));
+    ERROR("Opening '%s': FAILED", args.file);
+    ret = EXIT_FAILURE;
+    goto end;
+  }
+
+  if (args.offset < 0 || args.size < 0) {
+    INFO("Matching OFFSET/SIZE to FILE: ...");
+    if (!File_UpdateRange(fd, args.offset, args.size, &(args.offset),
+                          &(args.size))) {
+      ERROR("Matching OFFSET/SIZE to FILE: FAILED");
+      ret = EXIT_FAILURE;
+      goto end_after_open;
+    }
+  }
+
+  INFO("Mapping FILE (Range: [%li; %li)): ...", args.offset, args.size);
+
+  assert(args.offset >= 0);
+  assert(args.size >= 0);
+
+  if (!Mapping_FromFile(&mapping, fd, (size_t)args.offset, (size_t)args.size)) {
+    ERROR("Mapping FILE (Range: [%li; %li)): FAILED", args.offset, args.size);
+    ret = EXIT_FAILURE;
+    goto end_after_open;
+  }
+
+  if (isatty(fileno(stdin))) {
+    INFO("Reading: ...");
+    if (!File_Write(fileno(stdout), mapping.data, mapping.size)) {
+      ERROR("Reading: FAILED: %s", strerror(errno));
+      ret = EXIT_FAILURE;
+      goto end_after_mmap;
+    }
+  } else {
+    size_t written = 0;
+    INFO("Writing: ...");
+    if (!File_ReadInto(fileno(stdin), mapping.data, mapping.size, &written)) {
+      ERROR("Writing: FAILED: %s", strerror(errno));
+      ret = EXIT_FAILURE;
+      goto end_after_mmap;
+    } else {
+      DEBUG("Wrote: %zu bytes", written);
+    }
+  }
+
+end_after_mmap:
+  INFO("Unmapping memory: ...");
+  if (!Mapping_Unmap(&mapping)) {
+    WARN("Unmapping memory: FAILED");
+  }
+
+end_after_open:
+  INFO("Closing file: ...");
+  if (close(fd) == -1) {
+    ERROR("close(): %s", strerror(errno));
+    WARN("Closing file: FAILED");
+  }
+
+end:
+  return ret;
 }

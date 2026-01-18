@@ -66,7 +66,7 @@ entire file (from the begin to the end).
 
 ### Read
 
-When giving any `FILE` (that is 'mappable' using POSIX's `mmap()`), 
+When giving any `FILE` (that is 'mappable' using POSIX's `mmap()`),
 **output its content through STDOUT**.
 
 ```bash
@@ -96,22 +96,28 @@ The memory region mapped can be customized using:
 - `-s/--size N`: The size of the span (in bytes, default: -1);
 
 ```bash
-$ echo "Hello World" > test.txt; fmap test.txt -o 0x6 -s 2
+$ echo "Hello World" > test.txt; fmap test.txt -o 6 -s 2
 Wo
-$ echo -n "Hello" | fmap test.txt -o 0x6; cat test.txt
+$ echo -n "Hello" | fmap test.txt -o 6; cat test.txt
 Hello Hello
 ```
 
 > [!IMPORTANT]
 > Data written into the file are capped by `SIZE` bytes.<br>
 > If there are more data in STDIN, they will be **silently ignored**.
-> 
+>
 > ```bash
 > $ echo "Hello World" > test.txt; fmap test.txt
 > Hello World
 > $ echo -e "Hello\nThis is ignored ..." | fmap test.txt -o 0x6; cat test.txt
 > Hello Hello
 > ```
+
+> [!TIP]
+> `OFFSET` can be set to a **NEGATIVE** value, which makes it relative to the
+> **END** of the file.<br>
+> `FILE` **NEEDS** to be a **REGULAR FILE** (based on `stat()`) and not a
+> PIPE/FIFO/...
 
 ## 📝 License
 

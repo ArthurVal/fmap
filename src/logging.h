@@ -14,14 +14,14 @@
 typedef enum { FOREACH_LOGLEVEL(_DEFINE_LVL) } LogLevel;
 #undef _DEFINE_LVL
 
+static inline bool LogLevel_IsValid(LogLevel lvl);
+
 static inline const char *LogLevel_ToString(LogLevel lvl);
 bool LogLevel_FromString(const char *str, LogLevel *d_lvl);
-static inline bool LogLevel_IsValid(LogLevel lvl);
 
 LogLevel Logging_Level(LogLevel *new_lvl);
 
 void vLog(LogLevel lvl, const char *fmt, va_list args);
-
 static inline void Log(LogLevel lvl, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));
 
@@ -45,7 +45,9 @@ static inline const char *LogLevel_ToString(LogLevel lvl) {
 
 #undef _RETURN_STRING_LVL
 
-static inline bool LogLevel_IsValid(LogLevel lvl) { return LogLevel_ToString(lvl) != NULL; }
+static inline bool LogLevel_IsValid(LogLevel lvl) {
+  return LogLevel_ToString(lvl) != NULL;
+}
 
 static inline void Log(LogLevel lvl, const char *fmt, ...) {
   va_list args;
