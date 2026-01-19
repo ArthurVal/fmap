@@ -401,8 +401,6 @@ int main(int argc, char *argv[]) {
   };
 
   if (!Args_FromArgv(&args, argc, argv)) {
-    fputc('\n', stderr);
-    Usage(stderr, argv[0]);
     ret = EXIT_FAILURE;
     goto end;
   }
