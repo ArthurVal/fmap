@@ -62,13 +62,3 @@ cmake_print_variables(CMAKE_BUILD_TYPE)
 #                                    BUILD                                    #
 ###############################################################################
 add_subdirectory(src)
-
-###############################################################################
-#                                 CONFIG FILES                                #
-###############################################################################
-# Construct the project global config.h
-configure_file(
-  src/fmap/config.h.in
-  src/fmap/config.h
-  @ONLY
-)
