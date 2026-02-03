@@ -35,13 +35,10 @@ void vLog(LogLevel lvl, const char *fmt, va_list args) {
 
     struct timespec now;
     if (clock_gettime(CLOCK_REALTIME, &now) == 0) {
-      static char stamp[(4 + 2 + 2) + 2 // 'YYYY-MM-DD' <- strftime (%F)
-                        + 1             // ' '          <- Separator
-                        + (2 * 3) + 2   // 'HH:MM:SS'   <- strftime (%T)
-                        + 1             // ','          <- Separator
-                        + 3             // 'XXX'        <- msec
-                        + 1             // NULL TERMINATED
-      ] = {'\0'};
+      static char stamp[] = "YYYY-MM-DD HH:MM:SS,XXX";
+      /* - %F:     "YYYY-MM-DD" */
+      /* - %T:     "HH:MM:SS" */
+      /* - ,%.3li: ",XXX" */
 
       size_t cnt =
           strftime(stamp, sizeof(stamp), "%F %T", localtime(&now.tv_sec));
