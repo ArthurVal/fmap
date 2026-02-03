@@ -86,14 +86,6 @@ struct Args {
 
   ssize_t offset;
   ssize_t size;
-
-  union {
-    uint32_t all;
-    struct {
-      uint32_t help : 1;
-      uint32_t version : 1;
-    };
-  } flags;
 };
 
 static bool Args_FromArgv(struct Args *restrict args, int argc, char *argv[]) {
@@ -133,11 +125,13 @@ static bool Args_FromArgv(struct Args *restrict args, int argc, char *argv[]) {
          ARG_END) {
     switch (arg_id) {
       case ARG_HELP:
-        args->flags.help = true;
+        Usage(stdout, argv[0]);
+        exit(EXIT_SUCCESS);
         break;
 
       case ARG_VERSION:
-        args->flags.version = true;
+        puts(FMAP_VERSION_STR);
+        exit(EXIT_SUCCESS);
         break;
 
       case ARG_VERBOSE: {
@@ -390,8 +384,6 @@ int main(int argc, char *argv[]) {
       .file = NULL,
       .offset = 0,
       .size = -1,
-
-      .flags.all = 0x0,
   };
 
   struct Mapping mapping = {
@@ -402,16 +394,6 @@ int main(int argc, char *argv[]) {
 
   if (!Args_FromArgv(&args, argc, argv)) {
     ret = EXIT_FAILURE;
-    goto end;
-  }
-
-  if (args.flags.help) {
-    Usage(stdout, argv[0]);
-    goto end;
-  }
-
-  if (args.flags.version) {
-    puts(FMAP_VERSION_STR);
     goto end;
   }
 
