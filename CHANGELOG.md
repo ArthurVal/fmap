@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Do not output USAGE when wrong args is detected
+- Log formats:
+  - Add `[fmap]`
+  - Update stamp to `[YYYY-MM-DD HH:MM:SS,XXX]`
 
 ### Fixed
 
