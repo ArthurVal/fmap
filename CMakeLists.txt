@@ -68,7 +68,7 @@ add_subdirectory(src)
 ###############################################################################
 # Construct the project global config.h
 configure_file(
-  src/config.h.in
-  src/config.h
+  src/fmap/config.h.in
+  src/fmap/config.h
   @ONLY
 )

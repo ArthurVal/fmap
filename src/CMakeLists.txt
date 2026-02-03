@@ -1,5 +1,5 @@
 add_executable(${PROJECT_NAME}
-  logging.c
+  fmap/logging.c
   fmap.c
 )
 

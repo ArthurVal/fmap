@@ -16,8 +16,8 @@
 #include <unistd.h>   /* close */
 
 /* internal */
-#include "config.h"
-#include "logging.h"
+#include "fmap/config.h"
+#include "fmap/logging.h"
 
 static void Usage(FILE *restrict f, const char *restrict name) {
   assert(name != NULL);
