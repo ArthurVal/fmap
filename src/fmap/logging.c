@@ -35,17 +35,24 @@ void vLog(LogLevel lvl, const char *fmt, va_list args) {
 
     struct timespec now;
     if (clock_gettime(CLOCK_REALTIME, &now) == 0) {
-      static char stamp[(2 * 3) + 2 // 'HH:MM:SS' <- strftime
-                        + 1 + 9     // .XXXXXXXXX <- nsec
-                        + 1         // NULL TERMINATED
+      static char stamp[(4 + 2 + 2) + 2 // 'YYYY-MM-DD' <- strftime (%F)
+                        + 1             // ' '          <- Separator
+                        + (2 * 3) + 2   // 'HH:MM:SS'   <- strftime (%T)
+                        + 1             // ','          <- Separator
+                        + 3             // 'XXX'        <- msec
+                        + 1             // NULL TERMINATED
       ] = {'\0'};
-      size_t cnt = strftime(stamp, sizeof(stamp), "%T", localtime(&now.tv_sec));
-      snprintf(stamp + cnt, sizeof(stamp) - cnt, ".%.9li", now.tv_nsec);
+
+      size_t cnt =
+          strftime(stamp, sizeof(stamp), "%F %T", localtime(&now.tv_sec));
+
+      snprintf(stamp + cnt, sizeof(stamp) - cnt, ",%.3li",
+               (now.tv_nsec / (unsigned)(1e6)));
 
       fprintf(f, "[%.*s]", (int)sizeof(stamp), stamp);
     }
 
-    fprintf(f, "[%-5s]: ", LogLevel_ToString(lvl));
+    fprintf(f, "[fmap][%-5s]: ", LogLevel_ToString(lvl));
     vfprintf(f, fmt, args);
     fputc('\n', f);
     fflush(f);
